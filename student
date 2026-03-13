@@ -1,0 +1,10 @@
+\dt
+\d
+\d student
+GRANT ALL PRIVILEGES ON TABLE student TO innocent;
+GRANT ALL PRIVILEGES ON TABLE student TO postgres;
+\q
+ALTER ROLE innocent  WITH LOGIN PASSWORD 'admin';
+\dp 
+ALTER TABLE student ADD COLUMN token VARCHAR(64);
+\s student
