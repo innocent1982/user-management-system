@@ -1,7 +1,7 @@
 const {matchedData, validationResult} = require("express-validator");
-const {register} = require("../services/user/userHandler");
+const {register} = require("../services/handlers/userHandler");
 const { user } = require("pg/lib/defaults");
-const { initialVerifyMailProcess, processMailVerification } = require("../services/user/mailHandler");
+const { initialVerifyMailProcess, processMailVerification } = require("../services/handlers/mailHandler");
 
 exports.register = async(req, res, next) => {
     const validation = validationResult(req);

@@ -12,7 +12,7 @@ exports.userValidator = checkSchema({
       options: (value) => {
         let valid = true;
         const hasDigit = /[0-9]/.test(value);
-        const noSpecialCharacter = /^[a-zA-Z0-9]/.test(value);
+        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
         if (hasDigit) {
           valid = false;
         }
@@ -34,7 +34,7 @@ exports.userValidator = checkSchema({
        
         let valid = false;
         const hasDigit = /[0-9]/.test(value);
-        const noSpecialCharacter = /^[a-zA-Z0-9]/.test(value);
+        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
         const hasUpperCase = /[A-Z]/.test(value);
         const hasLowerCase = /[a-z]/.test(value);
         if (hasDigit && hasLowerCase && !noSpecialCharacter && hasUpperCase) {
@@ -61,7 +61,7 @@ exports.emailInputValidator = checkSchema({
       options: (value) => {
         let valid = true;
         const hasDigit = /[0-9]/.test(value);
-        const noSpecialCharacter = /^[a-zA-Z0-9]/.test(value);
+        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
         if (hasDigit) {
           valid = false;
         }
