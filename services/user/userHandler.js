@@ -2,8 +2,7 @@ const { user } = require("pg/lib/defaults");
 const pool = require("../../config/db");
 const crypto = require("crypto");
 const { encrypt } = require("../../utils/hashPassword");
-const {initialVerifyEmailProcess} = require("./mailHandler");
-const { initiateEmailVerification } = require("../../controllers/userController");
+const {initialVerifyMailProcess} = require("./mailHandler");
 
 const userExists = async (username, email) => {
   try {
@@ -44,29 +43,32 @@ const fullUserExists = async(username, email) => {
 }
 
 const create = async (username, email, password) => {
+  const client = await pool.connect()
   try {
+    await client.query("BEGIN");
     const status = "pending";
     created_at = String(new Date().toISOString());
-    console.log(created_at);
     updated_at = String(new Date().toISOString());
     const token = crypto.randomUUID();
-    console.log(token);
     const tokenExpiry = new Date( Date.now() + 24*60*60*1000).toISOString();
-    const { rowCount, rows } = await pool.query(
-      `INSERT INTO student(username, email, password, status, created_at, updated_at, token, token_expiry) VALUES('${username}', '${email}', '${password}','${status}', '${created_at}', '${updated_at}, ${token}, ${tokenExpiry}') RETURNING username, email, token`,
+    const { rowCount, rows } = await client.query(
+      `INSERT INTO student(username, email, password, status, created_at, updated_at, token, token_expiry) VALUES('${username}', '${email}', '${password}','${status}', '${created_at}', '${updated_at}', '${token}', '${tokenExpiry}') RETURNING username, email, token`,
     );
     if (rowCount === 1) {
       const {username, email, token} = rows[0];
-      const {success, message} = initialVerifyEmailProcess(username, email, token)
+      const {success, message} = await initialVerifyMailProcess(username, email, token)
       if(success){
-      return { success: true, message: "email", data:rows[0] };
+        await client.query("COMMIT");
+      return { success: true, message:"Successfully created user", data:rows[0] };
+      a
       }
-      return {success:true, message:null, data:rows[0]}
-    } else if (rowCount === 0) {
-      return { success: false, message: "failed" };
-    }
-    return { success: false, message: "failed" };
+      await client.query("ROLLBACK");
+      return {success:false, message:"Error when sending email", data:rows[0]}
+    } 
+    await client.query("ROLLBACK");
+    return { success: false, message: "Error writing in student table", data:null };
   } catch (e) {
+    await client.query("ROLLBACK");
     throw new Error(`Caught an exception while creating user: ${e}`);
   }
 };

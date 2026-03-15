@@ -1,10 +1,9 @@
-const {processUpdateToken} = require("./userHandler");
+
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const pool = require("../../config/db");
 
 exports.initialVerifyMailProcess = async(username, email, token) => {
-    console.log(token);
     const subject = `Verify email address`
     const text = `Please click the following link to verify your email: ${`http:??127.0.0.1:3000/student/verify-email?token=${token}`}`
     const html = `
@@ -17,29 +16,38 @@ exports.initialVerifyMailProcess = async(username, email, token) => {
         if(!success){
             return {success:false, message:"failed to send email"}     
         }
+        return {success:true, message:"email sent successfully"}
     } catch (e) {
-        throw new Error(`Caught an exception while sending mail`)
+        throw new Error(`Caught an exception while sending mail: ${e}`)
     }
     
 
 }
 
+const validate_token = (token_expiry) => {
+    const now = new Date();
+    const expiryDate = new Date(token_expiry);
+    return now > expiryDate;
+}
+
 exports.processMailVerification = async (token) => {
 
     try{
-        const {rowCount, rows} = await pool.query(`SELECT (username, email, token_expiry) FROM student WHERE token='${token}'`);
-        if(rowCount === 1){
+        const {rows} = await pool.query(`SELECT username, email, token_expiry FROM student WHERE token='${token}'`);
+        if(rows.length !== 0){
                 const timestamp = new Date().toISOString();
                 const {username, email, token_expiry} = rows[0];
-                if(token_expiry > Date(new Date() + 60 * 60 * 1000)){
+                const token_expired = validate_token(token_expiry);     
+                if(token_expired){
                     return{
                         success:false,
                         message:"token expired"
                     }
                 }
                 try{
-                const {rowCount} = await pool.query(`ALTER STUDENT SET verified=false, updated_at='${timestamp}' WHERE username='${username}' AND email='${email}'`);
-                if(rowCount === 1){
+                const response = await pool.query(`UPDATE student SET verified=true, updated_at=$1 WHERE username=$2 AND email=$3`, [timestamp, username, email]);
+                console.log(response);
+                if(response.rowCount === 1){
                     return {
                         success:true,
                         mesasge:"successsfully verified the user"                    }
@@ -63,25 +71,24 @@ exports.processMailVerification = async (token) => {
 }
 
 const sendMail = async(email, subject, text, html) => {
-    const transporter = nodemailer.createTransporter({
-        port:587,
-        secure:false,
-        host:"smtp.gmail.com",
-        auth:{
-            user:"innocentkamesa)%@gmail.com",
-            pass:"@Innocent123kamesa"
-        }
-    })
-    const {accepted} = await transporter.sendMail({
-        from:"innocentkamesa05@gmail.com",
-        to:email,
-        subject:subject,
-        text:text,
-        html:html
-    })
-    if(accepted.isEmpty){
-        return {success:false, message:"email not sent"}
-    }
-    return {success:true, message:"email sent"}
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: "innocentkamesa05@gmail.com",
+            pass: process.env.GMAIL_PASSWORD,
+        },
+    });
 
-}
+    const info = await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: email,
+        subject,
+        text,
+        html,
+    });
+    if (!info.accepted || info.accepted.length === 0) {
+        return {success:false, message:"email not sent"};
+    }
+
+    return {success:true, message:"email sent", info};
+};
