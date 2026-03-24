@@ -2,3 +2,4 @@ node_modules/
 py_client.py
 bcrypt.py
 .env
+crypto.js

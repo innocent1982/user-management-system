@@ -1,27 +1,11 @@
-const { checkSchema } = require("express-validator");
+const { checkSchema, check } = require("express-validator");
 const { password } = require("pg/lib/defaults");
 
-exports.userValidator = checkSchema({
-  username: {
-    isLength: {
-      options: { min: 6, max: 20 },
-      errorMessage: "Username length conditions unmet",
-      bail: true,
-    },
-    custom: {
-      options: (value) => {
-        let valid = true;
-        const hasDigit = /[0-9]/.test(value);
-        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
-        if (hasDigit) {
-          valid = false;
-        }
-        if(!noSpecialCharacter){
-          valid = false;
-        }
-        return valid;
-      },
-    },
+
+const loginFields = {
+   email: {
+    isEmail: true,
+    errorMessage: "email invalid",
   },
   password: {
     isLength: {
@@ -44,14 +28,10 @@ exports.userValidator = checkSchema({
       },
     },
   },
-  email: {
-    isEmail: true,
-    errorMessage: "email invalid",
-  },
-});
-
-exports.emailInputValidator = checkSchema({
-  username: {
+}
+const signUpFields = {
+  ...loginFields,
+    username: {
     isLength: {
       options: { min: 6, max: 20 },
       errorMessage: "Username length conditions unmet",
@@ -72,9 +52,7 @@ exports.emailInputValidator = checkSchema({
       },
     },
   },
-    email: {
-    isEmail: true,
-    errorMessage: "email invalid",
-  }
+}
 
-})
+exports.loginUserValidator = checkSchema(loginFields);
+exports.signUpValidator = checkSchema(signUpFields);

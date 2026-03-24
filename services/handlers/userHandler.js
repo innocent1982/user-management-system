@@ -2,126 +2,108 @@ const { user } = require("pg/lib/defaults");
 const pool = require("../../config/db");
 const crypto = require("crypto");
 const { encrypt } = require("../../utils/hashPassword");
-const {initialVerifyMailProcess} = require("./mailHandler");
+const { initiateEmailVerification } = require("./mailHandler");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
-const userExists = async (username, email) => {
-  try {
-    let output = false;
-    const usernameReponse = await pool.query(
-      `SELECT EXISTS ( SELECT 1 FROM student WHERE username='${username}' )`,
+const userExists = async (fields) => {
+  let output = {};
+  for (const key in fields) {
+    const value = fields[key];
+    const response = await pool.query(
+    `SELECT EXISTS ( SELECT 1 FROM student WHERE '${key}'='${value}' )`,
     );
-    const emailResponse = await pool.query(
-      `SELECT EXISTS ( SELECT 1 FROM student WHERE email='${email}' )`,
-    );
-    const usernameExists = usernameReponse.rows[0].exists;
-    const emailExists = emailResponse.rows[0].exists;
-    if (usernameExists) {
-      output = true;
+    if(response.rows[0].exists){
+        output[key] = `${key} exists`;
     }
-    if(emailExists){
-      output = true;
-    }
-    return output;
-  } catch (e) {
-    throw new Error(`Failed to verify user with the exception: ${e}`);
   }
+  return output;
 };
 
-const fullUserExists = async(username, email) => {
-  try{
-    const response = await pool.query(`SELECT EXISTS ( SELECT 1 FROM student WHERE username= '${username}' AND email='${email}' )`,
-    );
-    const exists = response.rows[0].exists;
-    if(exists){
-      return true;
-    }
-    return false;
-  }
-  catch(e){
-    throw new Error(`Failed to verify full user existance with the following exception: ${e}`)
-  }
-}
-
 const create = async (username, email, password) => {
-  const client = await pool.connect()
-  try {
+  const client = await pool.connect();
     await client.query("BEGIN");
     const status = "pending";
     created_at = String(new Date().toISOString());
     updated_at = String(new Date().toISOString());
     const token = crypto.randomUUID();
-    const tokenExpiry = new Date( Date.now() + 24*60*60*1000).toISOString();
+    const tokenExpiry = new Date(
+      Date.now() + 24 * 60 * 60 * 1000,
+    ).toISOString();
     const { rowCount, rows } = await client.query(
       `INSERT INTO student(username, email, password, status, created_at, updated_at, token, token_expiry) VALUES('${username}', '${email}', '${password}','${status}', '${created_at}', '${updated_at}', '${token}', '${tokenExpiry}') RETURNING username, email, token`,
     );
     if (rowCount === 1) {
-      const {username, email, token} = rows[0];
-      const {success, message} = await initialVerifyMailProcess(username, email, token)
-      if(success){
+      const { email, token } = rows[0];
+      const { success, message } = await initiateEmailVerification(
+        email,
+        token,
+      );
+      if (success) {
         await client.query("COMMIT");
-      return { success: true, message:"Successfully created user", data:rows[0] };
-      a
+        return {
+          success,
+          message: `Email sent successfully, open inbox and verify`,
+          data: rows[0],
+        };
+        a;
       }
       await client.query("ROLLBACK");
-      return {success:false, message:"Error when sending email", data:rows[0]}
-    } 
+      return {
+        success: false,
+        message: "Error when sending email",
+        data: rows[0],
+      };
+    }
     await client.query("ROLLBACK");
-    return { success: false, message: "Error writing in student table", data:null };
-  } catch (e) {
-    await client.query("ROLLBACK");
-    throw new Error(`Caught an exception while creating user: ${e}`);
-  }
+    return {
+      success: false,
+      message: "Error writing in student table",
+      data: null,
+    };
 };
 
-const updateToken = async(username, email, token, tokenExpiry) => {
-  try{
-    const {rows, rowCount} = await pool.query(`UPDATE student SET token='${token}', token_expiry='${tokenExpiry}' WHERE username='${username}' AND email='${email}';`,
-    )
-    if(rowCount === 1){
-        return {
-          suceess:true,
-          message:"updated"
-        }
-    }
-    return {
-      success:false,
-      message:"Failed to update token due to an unhandled exception"
-    }
-  }
-  catch(e){
-    throw new Error(`Encountered an exception when updating token: ${e}`)
-  }
-}
-
 exports.register = async (username, email, password) => {
-  try {
-    const exists = await userExists(username, email);
-    if (exists) {
+    const output = await userExists(username, email);
+    if (Object.keys(output).length > 0) {
       return {
         success: false,
         message: "exists",
+        data:output
       };
     }
     const hashed_password = await encrypt(password);
     const results = await create(username, email, hashed_password);
     return results;
-  } catch (e) {
-    throw new Error(`Caught an exception while registering user: ${e}`);
-  }
 };
 
-exports.processUpdateToken = async(payload) => {
-  const {username, email, token, tokenExpiry} = payload;
-  const exists = await fullUserExists(username, email);
-  if(!exists){
-    return {success:false, message:"User does not exist"}
+exports.loginUser = async(email, password) => {
+  const {rows, rowCount}  = await pool.query(`SELECT id, email, password FROM student WHERE email=$1`, [email]);
+  if(rowCount !== 1){
+    return {
+      success:false,
+      message:"User not found"
+    }
   }
-  const {success, message} = await updateToken(username, email, token, tokenExpiry);
-  if(success){
-    return {success, message}
+  const {id, email, hashedPassword} = rows[0];
+  if(!await bcrypt.compare(password, hashedPassword)){
+    return {
+      success:false,
+      message:"Incorrect password"
+    }
   }
-  return {
-    success:false,
-    message:"Failed to update token due to an unhandled exception"
+  try{
+    const access = jwt.sign({userId:id, userEmail:email}, process.env.JWT_KEY, {expiresIn:"5m"});
+    const refresh = jwt.sign({userId:id, userEmail:email}, process.env.JWT_KEY, {expiresIn:"1d"});
+    return {
+      success:true,
+      message:"Login successful",
+      data:{
+        access,
+        refresh
+      }
+    }
+  } catch (e) {
+    throw new Error("Error while generating login tokens")
   }
 }

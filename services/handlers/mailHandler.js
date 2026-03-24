@@ -2,8 +2,9 @@
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const pool = require("../../config/db");
+const jwt = require("jsonwebtoken");
 
-exports.initialVerifyMailProcess = async(username, email, token) => {
+exports.initiateEmailVerification = async(email, token) => {
     const subject = `Verify email address`
     const text = `Please click the following link to verify your email: ${`http:??127.0.0.1:3000/student/verify-email?token=${token}`}`
     const html = `
@@ -11,18 +12,10 @@ exports.initialVerifyMailProcess = async(username, email, token) => {
     <p>Please clink the link below to verify your email address</p>
     <a href=${`http:??127.0.0.1:3000/student/verify-email?token=${token}`}>Verify Email</a>
     `
-    try{
-        const {success, message} = await sendMail(email, subject, text,html);
-        if(!success){
-            return {success:false, message:"failed to send email"}     
-        }
-        return {success:true, message:"email sent successfully"}
-    } catch (e) {
-        throw new Error(`Caught an exception while sending mail: ${e}`)
-    }
-    
+    const {success, message} = await sendMail(email, subject, text,html);
+    return {success, message}
+} 
 
-}
 
 const validate_token = (token_expiry) => {
     const now = new Date();
@@ -30,45 +23,43 @@ const validate_token = (token_expiry) => {
     return now > expiryDate;
 }
 
-exports.processMailVerification = async (token) => {
-
-    try{
-        const {rows} = await pool.query(`SELECT username, email, token_expiry FROM student WHERE token='${token}'`);
-        if(rows.length !== 0){
-                const timestamp = new Date().toISOString();
-                const {username, email, token_expiry} = rows[0];
-                const token_expired = validate_token(token_expiry);     
-                if(token_expired){
-                    return{
-                        success:false,
-                        message:"token expired"
-                    }
-                }
-                try{
-                const response = await pool.query(`UPDATE student SET verified=true, updated_at=$1 WHERE username=$2 AND email=$3`, [timestamp, username, email]);
-                console.log(response);
-                if(response.rowCount === 1){
-                    return {
-                        success:true,
-                        mesasge:"successsfully verified the user"                    }
-                }
-                return {
-                    success:false,
-                    message:"Token valid but failed to verify the user account"
-                }
-            }catch(e){
-                throw new Error(`While verifying user an exception was caught: ${e}`)
+exports.verifyEmail = async (token) => {
+        const {rows} = await pool.query(`SELECT id, token_expiry FROM student WHERE token='${token}'`);
+        if(rows.length !== 1){
+            return {
+                success:false,
+                message:"invalid token"
+            }
+        } 
+        const timestamp = new Date().toISOString();
+        const {id, token_expiry} = rows[0];
+        const token_expired = validate_token(token_expiry);     
+        if(token_expired){
+            return{
+                success:false,
+                message:"token expired"
+            }
+        }            
+        const response = await pool.query(`UPDATE student SET verified=true, token=NULL, updated_at=$1 WHERE id=$2 RETURNING id, email`, [timestamp, id]);
+        console.log(response);
+        if(response.rowCount === 1){
+            const {id, email} = response.rows[0];
+            try{
+            const token = jwt.sign({userId:id, userEmail:email}, process.env.JWT_KEY, {expiresIn:"1hr"});
+            return {
+                success:true,
+                mesasge:"successsfully verified the user",
+                token:token
+            } 
+            } catch (error) {
+                throw new Error("Error while generating jwt token")
             }
         }
         return {
             success:false,
-            message:"Token expired or user not found"
+            message:"Error while verifying user"
         }
     }
-    catch(e){
-        throw new Error(`Error caught in the email verification process: ${e}`)
-    }
-}
 
 const sendMail = async(email, subject, text, html) => {
     const transporter = nodemailer.createTransport({
