@@ -3,3 +3,5 @@ py_client.py
 bcrypt.py
 .env
 crypto.js
+design/
+db/
