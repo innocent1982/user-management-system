@@ -1,0 +1,28 @@
+const app = require("../../app");
+const request = require("supertest");
+
+const user = {
+    username:"innocent",
+    email:"innocentkamesa05@gmail.com",
+    password:"@Inno2006"
+}
+describe("TESTING Users API", () => {
+
+//    it("POST /student/register/ sends email and returns user details and token", async () => {
+//     const res = await request(app).post("/users/register/").send(user).set("Accept", "application/json");
+//     console.log(`status: ${res.statusCode}`);
+//     console.log(res.body.token);
+//    })
+
+//    it("POST /student/verify-email/", async () => {
+//     const res = await request(app).post("/users/verify-email/?token=a499d6b8-ed6c-41d6-a063-ad1c073bdfa8").set("Accept", "application/json");
+//     console.log(`status: ${res.statusCode}`);           
+//     console.log(res.body)
+//    }) 
+
+    it("POST login", async () => {
+        const res = await request(app).post("/users/login/").send({email:user.email, password:user.password}).set("Accept", "application/json");
+        console.log(`status: ${res.statusCode}`);           
+        console.log(res.body)
+    })
+}) 

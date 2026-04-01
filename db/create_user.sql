@@ -1,11 +1,12 @@
-CREATE TYPE status_choices AS ENUM('pending','active','inactive','suspended');
+CREATE TYPE role_choices AS ENUM('admin', 'classic');
 
-CREATE TABLE student(
+CREATE TABLE users(
     id SERIAL PRIMARY KEY,
     username VARCHAR(20) NOT NULL UNIQUE CHECK(LENGTH(username) > 6),
     password VARCHAR(20) NOT NULL CHECK(LENGTH(password) > 8),
-    status status_choices DEFAULT 'pending',
     email VARCHAR(255) NOT NULL UNIQUE,
+    role role_choices DEFAULT 'classic',
+    is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

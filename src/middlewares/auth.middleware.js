@@ -1,0 +1,14 @@
+const jwt = require("jsonwebtoken");
+
+exports.authenticateToken = (req, res, next) => {
+    const {token} = req.body;
+
+    try{
+        const decoded = jwt.verify(token, process.env.JWT_KEY)
+        req.user = {id:decoded.userId, email:decoded.userEmail}
+        next();
+    }
+    catch(error){
+        return res.status(400).json({success:false, message:"Invalid token"})
+    }
+}

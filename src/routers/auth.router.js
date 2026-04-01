@@ -1,10 +1,10 @@
 const express = require("express");
 const userRouter = express.Router();
-const { loginUserValidator, signUpValidator } = require("../services/validators/userValidator");
-const {register, verify, login } = require("../controllers/userController");
+const { loginUserValidator, signUpValidator } = require("../validators/auth.validator");
+const {register, verify, login } = require("../controllers/auth.controller");
 
 userRouter.post("/register/", signUpValidator, register);
-userRouter.get("/verify-email/", verify);
-userRouter.get("/login/",loginUserValidator, login);
+userRouter.post("/verify-email/", verify);
+userRouter.post("/login/",loginUserValidator, login);
 
 module.exports = userRouter;
