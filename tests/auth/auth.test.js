@@ -20,9 +20,14 @@ describe("TESTING Users API", () => {
 //     console.log(res.body)
 //    }) 
 
-    it("POST login", async () => {
-        const res = await request(app).post("/users/login/").send({email:user.email, password:user.password}).set("Accept", "application/json");
+    // it("POST login", async () => {
+    //     const res = await request(app).post("/users/login/").send({email:user.email, password:user.password}).set("Accept", "application/json");
+    //     console.log(`status: ${res.statusCode}`);           
+    //     console.log(res.body)
+    // })
+    it("POST refresh-token", async () => {
+        const res = await request(app).post("/users/logout/").send({token:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInVzZXJFbWFpbCI6Imlubm9jZW50a2FtZXNhMDVAZ21haWwuY29tIiwiaWF0IjoxNzc1MTk5NTIxLCJleHAiOjE3NzUyODU5MjF9.QpCLzkkDZ5cgBxQaKCcJ3_byNwO21AtlktVGvj3pgZk"}, ).set("Accept", "application/json");
         console.log(`status: ${res.statusCode}`);           
         console.log(res.body)
-    })
+})
 }) 

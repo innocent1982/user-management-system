@@ -1,7 +1,6 @@
 const {matchedData, validationResult} = require("express-validator");
-const {register, loginUser, verifyEmail} = require("../services/auth.services");
+const {register, loginUser, logoutUser, verifyEmail, refreshUserTokens} = require("../services/auth.services");
 const { user } = require("pg/lib/defaults");
-const { initialVerifyMailProcess } = require("../utils/mail.utils");
 
 exports.register = async(req, res, next) => {
     try{
@@ -47,5 +46,28 @@ exports.login = async(req, res, next) => {
         return res.status(400).json({success:false, message});
     } catch (error){
         next(error);
+    }
+}
+
+exports.logout = async(req, res, next) => {
+    const {id, token} = req.user;
+    try{
+    const {success, message} = await logoutUser(id, token);
+    if(!success){
+        return res.status(400).json({success:false, message})
+    }
+    return res.status(201).json({success, message})
+    } catch (error) {
+        next(error);
+    }
+}
+
+exports.refreshToken = async(req, res, next) => {
+    const {id, email, token} = req.user;
+    try{
+    const {success, message, token:refreshedToken} = await refreshUserTokens(id, email, token);    
+    return res.status(201).json({success, message, token:refreshedToken});
+    } catch (error) {
+        next(error)
     }
 }

@@ -5,7 +5,9 @@ const { encrypt } = require("../utils/hashPassword");
 const { initiateEmailVerification, validate_token } = require("../utils/mail.utils");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const {createClient} = require("redis");
+const {redisClient} = require("../config/redis.config");
+const {createTokens} = require("../utils/auth.utils")
+
 
 const userExists = async (fields) => {
   let output = {};
@@ -94,13 +96,7 @@ exports.loginUser = async (email, password) => {
       message:"Incorrect password"
     }
   }
-  try{
-    const access = jwt.sign({userId:id, userEmail:userEmail}, process.env.JWT_SECRET, {expiresIn:"5m"});
-    const refresh = jwt.sign({userId:id, userEmail:userEmail}, process.env.JWT_SECRET, {expiresIn:"1d"});
-    const redisClient = createClient({url:"redis://localhost:6379"});
-    redisClient.on('error', (error) => {console.log("Redis error:", error);})
-    await redisClient.connect(); 
-    await redisClient.set("refresh", refresh)
+  const {access, refresh} = await createTokens(id, userEmail);
     return {
       success:true,
       message:"Login successful",
@@ -109,10 +105,7 @@ exports.loginUser = async (email, password) => {
         refresh
       }
     }
-  } catch (e) {
-    throw new Error(`Error while generating login tokens: ${e.message}`)
   }
-}
 
 exports.verifyEmail = async (token) => {
         const {rows} = await pool.query(`SELECT id, token_expiry FROM users WHERE token='${token}'`);
@@ -149,3 +142,32 @@ exports.verifyEmail = async (token) => {
         }
     }
 
+exports.logoutUser = async(id, email, token) => {
+  const response = await redisClient.del(`refresh-${id}`);
+  if(response !== 1){
+    return {
+      success:false,
+      message:"failed to logout: Key does not exist"
+    }
+  }
+  return{
+    success:true,
+    message:"Logout successful"
+  }
+}
+
+exports.refreshUserTokens = async(id, email, token) => {
+  const stored  = await redisClient.get(`refresh-${id}`);
+  if(stored === null || stored !== token) {
+    return {
+      success:false,
+      message:"Invalid refresh token"
+    }
+  }
+  const access = jwt.sign({userId:id, userEmail:email}, process.env.JWT_SECRET, {expiresIn:"10m"});
+  return{
+    success:true,
+    message:"Tokens refreshed successful",
+    token:access
+  }
+}
