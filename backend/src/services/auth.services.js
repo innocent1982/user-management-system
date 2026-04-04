@@ -9,7 +9,7 @@ const {redisClient} = require("../config/redis.config");
 const {createTokens} = require("../utils/auth.utils")
 
 
-const userExists = async (fields) => {
+exports.userExists = async (fields) => {
   let output = {};
   for (const key in fields) {
     const value = fields[key];
@@ -23,7 +23,7 @@ const userExists = async (fields) => {
   return output;
 };
 
-const create = async (username, email, password, isTest) => {
+const create = async (username, email, password) => {
   const client = await pool.connect();
     await client.query("BEGIN");
     const role = "classic";
@@ -38,10 +38,11 @@ const create = async (username, email, password, isTest) => {
     );
     if (rowCount === 1) {
       const { email, token } = rows[0];
+      const responseEndpoint = "http://127.0.1:3000/student/verify-email?token=";
       const { success, message } = await initiateEmailVerification(
         email,
         token,
-        isTest
+        responseEndpoint
       );
       if (success) {
         await client.query("COMMIT");
@@ -66,8 +67,8 @@ const create = async (username, email, password, isTest) => {
     };
 };
 
-exports.register = async (username, email, password, isTest) => {
-    const output = await userExists(username, email);
+exports.register = async (username, email, password) => {
+    const output = await userExists({username, email});
     if (Object.keys(output).length > 0) {
       return {
         success: false,

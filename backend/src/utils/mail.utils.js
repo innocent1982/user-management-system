@@ -4,15 +4,15 @@ const crypto = require("crypto");
 const pool = require("../config/db.config");
 const jwt = require("jsonwebtoken");
 
-exports.initiateEmailVerification = async(email, token, isTest) => {
+exports.initiateEmailVerification = async(email, token, endpoint) => {
     const subject = `Verify email address`
-    const text = `Please click the following link to verify your email: ${`http:??127.0.0.1:3000/student/verify-email?token=${token}`}`
+    const text = `Please click the following link to verify your email: ${endpoint}${token}`
     const html = `
     <p>Hello,</p>
     <p>Please clink the link below to verify your email address</p>
-    <a href=${`http:??127.0.0.1:3000/student/verify-email?token=${token}`}>Verify Email</a>
+    <a href=${endpoint}${token}>Verify Email</a>
     `
-    const {success, message} = isTest ? (() => {return {success:true, message:"Email sent successfully (test mode)"};}) : await sendMail(email, subject, text,html)
+    const {success, message} = await sendMail(email, subject, text,html)
     return {success, message}
 } 
 
