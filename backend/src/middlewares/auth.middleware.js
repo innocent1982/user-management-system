@@ -1,6 +1,6 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
-exports.authenticateToken = (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
     const {token} = req.body;
 
     try{
@@ -11,4 +11,4 @@ exports.authenticateToken = (req, res, next) => {
     catch(error){
         return res.status(400).json({success:false, message:"Invalid token"})
     }
-}
+};

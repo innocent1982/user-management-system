@@ -1,7 +1,7 @@
-const {redisClient} = require("../config/redis.config");
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
+import { redisClient } from "../config/redis.config.js";
 
-exports.createTokens = async(id, email) => {
+export const createTokens = async (id, email) => {
     try{
         const access = jwt.sign({userId:id, userEmail:email}, process.env.JWT_SECRET, {expiresIn:"10m"});
         const refresh = jwt.sign({userId:id, userEmail:email}, process.env.JWT_SECRET, {expiresIn:"1d"});
@@ -15,6 +15,6 @@ exports.createTokens = async(id, email) => {
         }
 
     } catch (error) {
-        throw new Error(`Error in create tokens util: ${error}`)
+        throw new Error(`Error in create tokens util: ${error}`);
     }
-}
+};

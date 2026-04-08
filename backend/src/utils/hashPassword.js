@@ -1,7 +1,7 @@
-const bcrypt = require("bcrypt");
+import bcrypt from "bcrypt";
 
-exports.encrypt = async(value) => {
+export const encrypt = async (value) => {
     const saltCount = 10;
     const hash = await bcrypt.hash(value, saltCount);
-    return hash
-}
+    return hash;
+};

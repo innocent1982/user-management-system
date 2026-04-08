@@ -1,28 +1,40 @@
-const {matchedData, validationResult} = require("express-validator");
-const {register, loginUser, logoutUser, verifyEmail, refreshUserTokens, userExists} = require("../services/auth.services");
-const { user } = require("pg/lib/defaults");
-const {initiateEmailVerification} = require("../utils/mail.utils");
-const crypto = require("crypto");
-const {pool} = require("../config/db.config");
+import crypto from "crypto";
+import { matchedData, validationResult } from "express-validator";
+import pool from "../config/db.config.js";
+import {
+  loginUser,
+  logoutUser,
+  refreshUserTokens,
+  register as registerUser,
+  userExists,
+  verifyEmail,
+} from "../services/auth.services.js";
+import { encrypt } from "../utils/hashPassword.js";
+import { initiateEmailVerification, validate_token } from "../utils/mail.utils.js";
 
-exports.register = async(req, res, next) => {
+export const register = async (req, res, next) => {
     try{
     const validation = validationResult(req);
     if(!validation.isEmpty()){
         return res.status(400).json({success:false, message:"request data is not valid", errors:validation.array()})
     }
     const {username, email, password} = matchedData(req);
-    const response = await register(username, email, password);
+    const response = await registerUser(username, email, password);
     if(response.success){
+        console.log("Controller responding")
         return res.status(201).json({success:true, message:response.message, data:response.data})
     }
     return res.status(400).json({success:false, message:response.message, data:response.data})
     } catch (error){
+        if(error.code === "23505"){
+            console.log("Unique constraint violation:", error.detail);
+            return res.status(400).json({success:false, message:"user with the provided email or username already exists"})
+        }
         next(error);
     }
-}
+};
 
-exports.verify = async(req, res, next) => {
+export const verify = async (req, res, next) => {
     const {token} = req.query;
     try{
         const {success, message} = await verifyEmail(token);
@@ -33,9 +45,9 @@ exports.verify = async(req, res, next) => {
     } catch (error){
         next(error);
     }
-}
+};
 
-exports.login = async(req, res, next) => {
+export const login = async (req, res, next) => {
     const validation = validationResult(req);
     if(!validation.isEmpty()){
         return res.status(400).json({success:false, message:"request data is not valid", errors:validation.array()})
@@ -50,9 +62,9 @@ exports.login = async(req, res, next) => {
     } catch (error){
         next(error);
     }
-}
+};
 
-exports.logout = async(req, res, next) => {
+export const logout = async (req, res, next) => {
     const {id, token} = req.user;
     try{
     const {success, message} = await logoutUser(id, token);
@@ -63,9 +75,9 @@ exports.logout = async(req, res, next) => {
     } catch (error) {
         next(error);
     }
-}
+};
 
-exports.refreshToken = async(req, res, next) => {
+export const refreshToken = async (req, res, next) => {
     const {id, email, token} = req.user;
     try{
     const {success, message, token:refreshedToken} = await refreshUserTokens(id, email, token);    
@@ -73,9 +85,9 @@ exports.refreshToken = async(req, res, next) => {
     } catch (error) {
         next(error)
     }
-}
+};
 
-exports.forgotPassword = async(req, res, next) => {
+export const forgotPassword = async (req, res, next) => {
     const validation = validationResult(req);
     if(!validation.isEmpty()){
         return res.status(400).json({success:false, message:"validation error", data:validation.array})
@@ -102,9 +114,9 @@ exports.forgotPassword = async(req, res, next) => {
     catch (error) {
         next(error);
     }
-}
+};
 
-exports.resetPassword = async(req, res, next) => {
+export const resetPassword = async (req, res, next) => {
     const {token, new_password} = req.body;
     if(!token || !new_password){
         return res.status(400).json({success:false, message:"token and new password are required"})
@@ -127,4 +139,4 @@ exports.resetPassword = async(req, res, next) => {
     } catch (error) {
         next(error);
     }
-}
+};

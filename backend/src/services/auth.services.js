@@ -1,15 +1,14 @@
-const { user } = require("pg/lib/defaults");
-const pool = require("../config/db.config");
-const crypto = require("crypto");
-const { encrypt } = require("../utils/hashPassword");
-const { initiateEmailVerification, validate_token } = require("../utils/mail.utils");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-const {redisClient} = require("../config/redis.config");
-const {createTokens} = require("../utils/auth.utils")
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+import pool from "../config/db.config.js";
+import { redisClient } from "../config/redis.config.js";
+import { createTokens } from "../utils/auth.utils.js";
+import { encrypt } from "../utils/hashPassword.js";
+import { initiateEmailVerification, validate_token } from "../utils/mail.utils.js";
 
 
-exports.userExists = async (fields) => {
+export const userExists = async (fields) => {
   let output = {};
   for (const key in fields) {
     const value = fields[key];
@@ -27,8 +26,8 @@ const create = async (username, email, password) => {
   const client = await pool.connect();
     await client.query("BEGIN");
     const role = "classic";
-    created_at = String(new Date().toISOString());
-    updated_at = String(new Date().toISOString());
+    const created_at = String(new Date().toISOString());
+    const updated_at = String(new Date().toISOString());
     const token = crypto.randomUUID();
     const tokenExpiry = new Date(
       Date.now() + 24 * 60 * 60 * 1000,
@@ -42,7 +41,8 @@ const create = async (username, email, password) => {
       const { success, message } = await initiateEmailVerification(
         email,
         token,
-        responseEndpoint
+        responseEndpoint,
+        true
       );
       if (success) {
         await client.query("COMMIT");
@@ -67,7 +67,7 @@ const create = async (username, email, password) => {
     };
 };
 
-exports.register = async (username, email, password) => {
+export const register = async (username, email, password) => {
     const output = await userExists({username, email});
     if (Object.keys(output).length > 0) {
       return {
@@ -77,19 +77,25 @@ exports.register = async (username, email, password) => {
       };
     }
     const hashed_password = await encrypt(password);                                                
-    const results = await create(username, email, hashed_password, isTest);
+    const results = await create(username, email, hashed_password);
     return results;
 };
 
-exports.loginUser = async (email, password) => {
-  const {rows, rowCount}  = await pool.query(`SELECT id, email, password FROM users WHERE email=$1`, [email]);
+export const loginUser = async (email, password) => {
+  const {rows, rowCount}  = await pool.query(`SELECT id, email, password, is_verified FROM users WHERE email=$1`, [email]);
   if(rowCount !== 1){
     return {
       success:false,
       message:"User not found"
     }
   }
-  const {id, email:userEmail, password:hashedPassword} = rows[0];
+  const {id, email:userEmail, password:hashedPassword, is_verified} = rows[0];
+  if(!is_verified){
+    return {
+      success:false,
+      message:"Email not verified, check your inbox and verify your email"
+    }
+  }
   const passwordMatched = await bcrypt.compare(password, hashedPassword);
   if(!passwordMatched){
     return {
@@ -106,9 +112,9 @@ exports.loginUser = async (email, password) => {
         refresh
       }
     }
-  }
+  };
 
-exports.verifyEmail = async (token) => {
+export const verifyEmail = async (token) => {
         const {rows} = await pool.query(`SELECT id, token_expiry FROM users WHERE token='${token}'`);
         const client = await pool.connect();
         await client.query("BEGIN");
@@ -141,9 +147,9 @@ exports.verifyEmail = async (token) => {
             success:false,
             message:"Error while verifying user"
         }
-    }
+    };
 
-exports.logoutUser = async(id, email, token) => {
+export const logoutUser = async (id, email, token) => {
   const response = await redisClient.del(`refresh-${id}`);
   if(response !== 1){
     return {
@@ -155,9 +161,9 @@ exports.logoutUser = async(id, email, token) => {
     success:true,
     message:"Logout successful"
   }
-}
+};
 
-exports.refreshUserTokens = async(id, email, token) => {
+export const refreshUserTokens = async (id, email, token) => {
   const stored  = await redisClient.get(`refresh-${id}`);
   if(stored === null || stored !== token) {
     return {
@@ -170,5 +176,5 @@ exports.refreshUserTokens = async(id, email, token) => {
     success:true,
     message:"Tokens refreshed successful",
     token:access
-  }
-}
+  };
+};

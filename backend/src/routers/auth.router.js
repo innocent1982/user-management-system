@@ -1,10 +1,18 @@
-const express = require("express");
-const userRouter = express.Router();
-const { loginUserValidator, signUpValidator } = require("../validators/auth.validator");
-const {register, verify, login, logout, refreshToken, forgotPassword, resetPassword } = require("../controllers/auth.controllers");
-const {authenticateToken} = require("../middlewares/auth.middleware");
-const {checkSchema} =  require("express-validator")
+import express from "express";
+import { checkSchema } from "express-validator";
+import {
+  forgotPassword,
+  login,
+  logout,
+  refreshToken,
+  register,
+  resetPassword,
+  verify,
+} from "../controllers/auth.controllers.js";
+import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { loginUserValidator, signUpValidator } from "../validators/auth.validator.js";
 
+const userRouter = express.Router();
 
 userRouter.post("/register/", signUpValidator, register);
 userRouter.post("/verify-email/", verify);
@@ -14,4 +22,4 @@ userRouter.post("/refresh-token/", authenticateToken, refreshToken);
 userRouter.post("/forgot-password/", checkSchema({email:{isEmail:true}}), forgotPassword);
 userRouter.post("/reset-password/", resetPassword);
 
-module.exports = userRouter;
+export default userRouter;

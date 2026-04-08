@@ -1,5 +1,5 @@
-const app = require("../../app");
-const request = require("supertest");
+import request from "supertest";
+import app from "../../app.js";
 
 const user = {
     username:"innocent",

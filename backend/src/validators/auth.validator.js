@@ -1,5 +1,4 @@
-const { checkSchema, check } = require("express-validator");
-const { password } = require("pg/lib/defaults");
+import { checkSchema } from "express-validator";
 
 
 const loginFields = {
@@ -54,5 +53,5 @@ const signUpFields = {
   },
 }
 
-exports.loginUserValidator = checkSchema(loginFields);
-exports.signUpValidator = checkSchema(signUpFields);
+export const loginUserValidator = checkSchema(loginFields);
+export const signUpValidator = checkSchema(signUpFields);
