@@ -12,14 +12,14 @@ import {
 import { authenticateToken } from "../middlewares/auth.middleware.js";
 import { loginUserValidator, signUpValidator } from "../validators/auth.validator.js";
 
-const userRouter = express.Router();
+const authRouter = express.Router();
 
-userRouter.post("/register/", signUpValidator, register);
-userRouter.post("/verify-email/", verify);
-userRouter.post("/login/",loginUserValidator, login);
-userRouter.post("/logout/", authenticateToken, logout);
-userRouter.post("/refresh-token/", authenticateToken, refreshToken);
-userRouter.post("/forgot-password/", checkSchema({email:{isEmail:true}}), forgotPassword);
-userRouter.post("/reset-password/", resetPassword);
+authRouter.post("/register/", signUpValidator, register);
+authRouter.get("/verify-email/", verify);
+authRouter.post("/login/",loginUserValidator, login);
+authRouter.post("/logout/", authenticateToken, logout);
+authRouter.post("/refresh-token/", authenticateToken, refreshToken);
+authRouter.post("/forgot-password/", checkSchema({email:{isEmail:true}}), forgotPassword);
+authRouter.post("/reset-password/", resetPassword);
 
-export default userRouter;
+export default authRouter;

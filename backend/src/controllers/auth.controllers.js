@@ -48,6 +48,7 @@ export const verify = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
+    console.log("Controller reached!")
     const validation = validationResult(req);
     if(!validation.isEmpty()){
         return res.status(400).json({success:false, message:"request data is not valid", errors:validation.array()})
@@ -94,6 +95,7 @@ export const forgotPassword = async (req, res, next) => {
     }
     const {email} = matchedData(req);
     try{
+        console.log(email)
         const output = await userExists({email});
         if(Object.keys(output).length === 0){
             return res.status(200).json({success:false, message:"user with the provided email does not exist"})
@@ -104,8 +106,8 @@ export const forgotPassword = async (req, res, next) => {
         if(rowCount !== 1){
             return res.status(500).json({success:false, message:"error setting up password reset"})
         }
-        const endpoint = `http://127.0.0.1:5000/users/reset-password/`
-        const {success, message} = await initiateEmailVerification(email, token, endpoint);
+        const endpoint = `http://127.0.0.1:5173/reset-password?token=`
+        const {success, message} = await initiateEmailVerification(email, token, endpoint, false);
         if(success){
             return res.status(200).json({success, message});
         }
@@ -117,7 +119,7 @@ export const forgotPassword = async (req, res, next) => {
 };
 
 export const resetPassword = async (req, res, next) => {
-    const {token, new_password} = req.body;
+    const {token, password:new_password} = req.body;
     if(!token || !new_password){
         return res.status(400).json({success:false, message:"token and new password are required"})
     }
@@ -131,7 +133,8 @@ export const resetPassword = async (req, res, next) => {
             return res.status(400).json({success:false, message:"token has expired"})
         }
         const hashed_password = await encrypt(new_password);
-        const {rowCount:updateCount} = await pool.query(`UPDATE users SET password=$1, token=null, token_expiry=null WHERE id=$2`, [hashed_password, id]);
+        console.log(new_password)
+        const {rowCount:updateCount} = await pool.query(`UPDATE users SET password='${hashed_password}', token=null, token_expiry=null WHERE id=${id}`);
         if(updateCount !== 1){
             return res.status(500).json({success:false, message:"error resetting password"})
         }

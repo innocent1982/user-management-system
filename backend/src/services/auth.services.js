@@ -12,10 +12,11 @@ export const userExists = async (fields) => {
   let output = {};
   for (const key in fields) {
     const value = fields[key];
-    const response = await pool.query(
-    `SELECT EXISTS ( SELECT 1 FROM users WHERE '${key}'='${value}' )`,
+    console.log(`${key}, ${value}`)
+    const {rows} = await pool.query(
+    `SELECT EXISTS ( SELECT 1 FROM users WHERE ${key}='${value}' )`
     );
-    if(response.rows[0].exists){
+    if(rows[0].exists){
         output[key] = `${key} exists`;
     }
   }
@@ -37,12 +38,12 @@ const create = async (username, email, password) => {
     );
     if (rowCount === 1) {
       const { email, token } = rows[0];
-      const responseEndpoint = "http://127.0.1:3000/student/verify-email?token=";
+      const responseEndpoint = "http://127.0.1:3000/auth/verify-email?token=";
       const { success, message } = await initiateEmailVerification(
         email,
         token,
         responseEndpoint,
-        true
+        false
       );
       if (success) {
         await client.query("COMMIT");
@@ -50,7 +51,7 @@ const create = async (username, email, password) => {
           success,
           message: `Email sent successfully, open inbox and verify`,
           data: rows[0],
-        };;
+        };
       }
       await client.query("ROLLBACK");
       return {
