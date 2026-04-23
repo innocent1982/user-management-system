@@ -31,12 +31,12 @@ return (
 
     <div className="w-screen h-screen flex bg-gray-200 flex-col justify-center align-center">
         {registered ? (
-            <div className="min-w-[60%] flex flex-col mx-auto my-auto">
-                   <img src="/check.png" className="w-35 h-35 mx-auto"/>
+            <div className="min-w-30 flex flex-col mx-auto my-auto">
+                   <img src="/check.png" className="w-35 h-35 md:w-10 md:h-10 mx-auto"/>
                    <p className="text-xl font-bold mx-auto">Email successfully sent, check mail</p>  
                 </div>
         ) : (
-        <div className="flex flex-col bg-gray-50 gap-4 w-[30%] mx-auto my-auto px-10 rounded-md shadow-md">
+        <div className="flex flex-col bg-gray-50 gap-4 min-w-12 mx-auto my-auto px-10 md:h-full rounded-md shadow-md">
             <h1 className="text-2xl font-bold my-8">Get Started now</h1>
             <form className="flex flex-col gap-2 w-full " onSubmit={handleSubmit}>
                 <FormField labelText="User Name" type="text" name="username" placeholder="Enter username" onChange={handleChange} />

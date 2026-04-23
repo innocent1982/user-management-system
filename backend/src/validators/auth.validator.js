@@ -1,11 +1,38 @@
 import { checkSchema } from "express-validator";
 
-
-const loginFields = {
-   email: {
+const emailField = {
+  email: {
     isEmail: true,
     errorMessage: "email invalid",
-  },
+  }
+}
+
+const usernameField = {
+  username: {
+    isLength: {
+      options: { min: 6, max: 20 },
+      errorMessage: "Username length conditions unmet",
+      bail: true,
+    },
+    custom: {
+      options: (value) => {
+        let valid = true;
+        const hasDigit = /[0-9]/.test(value);
+        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
+        if (hasDigit) {
+          valid = false;
+        }
+        if(!noSpecialCharacter){
+          valid = false;
+        }
+        return valid;
+      }
+    }
+  }
+}
+    
+
+const passwordField = {
   password: {
     isLength: {
       options: { min: 8, max: 20 },
@@ -28,30 +55,23 @@ const loginFields = {
     },
   },
 }
+
+const loginFields = {
+  ...emailField,
+  ...passwordField
+}
+
 const signUpFields = {
-  ...loginFields,
-    username: {
-    isLength: {
-      options: { min: 6, max: 20 },
-      errorMessage: "Username length conditions unmet",
-      bail: true,
-    },
-    custom: {
-      options: (value) => {
-        let valid = true;
-        const hasDigit = /[0-9]/.test(value);
-        const noSpecialCharacter = /^[a-zA-Z0-9]+$/.test(value);
-        if (hasDigit) {
-          valid = false;
-        }
-        if(!noSpecialCharacter){
-          valid = false;
-        }
-        return valid;
-      },
-    },
-  },
+  ...usernameField,
+  ...emailField,
+  ...passwordField
+}
+
+const userFields = {
+  ...usernameField,
+  ...emailField
 }
 
 export const loginUserValidator = checkSchema(loginFields);
 export const signUpValidator = checkSchema(signUpFields);
+export const userValidator = checkSchema(userFields);
